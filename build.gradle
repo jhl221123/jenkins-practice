@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.2'
     id 'io.spring.dependency-management' version '1.1.6'
+    id 'jacoco'
 }
 
 group = 'practice'
@@ -11,6 +12,11 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
+}
+
+jacoco {
+    toolVersion = "0.8.9"
+    reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
 }
 
 configurations {
@@ -36,4 +42,50 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.register('testCoverage', Test) {
+    group 'verification'
+    description 'Runs the unit tests with coverage'
+
+    dependsOn(':test',
+            ':jacocoTestReport',
+            ':jacocoTestCoverageVerification')
+
+    tasks['jacocoTestReport'].mustRunAfter(tasks['test'])
+    tasks['jacocoTestCoverageVerification'].mustRunAfter(tasks['jacocoTestReport'])
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+        csv.required = false
+        html.required = true
+    }
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        /*
+            1. 클래스 단위로 브랜치와 라인 커버리지 비율을 체크
+            2. Lombok으로 생성된 코드는 @Generated를 통해 테스트 커버리지 대상에서 제외
+         */
+        rule {
+            element = 'CLASS'
+
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+
+            excludes = []
+        }
+    }
 }
